@@ -18,6 +18,8 @@ def calculate_pi(n) :
   return s
 
 if __name__ == "__main__" :
-  my_pi = calculate_pi(2000000)
-  print(my_pi)
-  print(my_pi - math.pi)
+  my_pi = calculate_pi(20000)
+  with open('output.log', 'w') as fout :
+    fout.write(f'{my_pi:.12f}\n')
+    fout.write(f'{my_pi - math.pi:.12f}\n')
+
