@@ -19,10 +19,12 @@ def calculate_pi(n) :
 
 if __name__ == "__main__" :
   from datetime import datetime
+  import os
+  output = "output-" + os.getenv('UUID') + '.log'
   for i in range(1000) :
     my_pi = calculate_pi(2000000)
-    with open('output.log', 'w') as fout :
-      fout.write("Time now: " + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n')
+    with open(output, 'a') as fout :
+      fout.write('Time now: ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '\n')
       fout.write(f'{my_pi:.12f}\n')
       fout.write(f'{my_pi - math.pi:.12f}\n')
 
