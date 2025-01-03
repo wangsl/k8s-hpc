@@ -12,8 +12,9 @@ metadata:
     app.openshift.io/runtime-namespace: sw77-hpc-test
 
 spec:
-  parallelism: 10
+  parallelism: 50
   completions: 100
+  completionMode: Indexed
   ttlSecondsAfterFinished: 120
   selector:
     matchLabels:
@@ -33,10 +34,10 @@ spec:
       containers:
         - resources:
             limits:
-              cpu: '120'
+              cpu: '64'
               memory: 40Gi
             requests:
-              cpu: '120'
+              cpu: '64'
               memory: 20Gi
           name: gromacs
           volumeMounts:
@@ -51,14 +52,20 @@ spec:
               value: America/New_York
             - name: HOME
               value: /work/wang
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
           command:
             - /bin/bash
             - '-c'
             - |
-              source /ext3/env-chemistry.sh && 
-              cd /work/wang/gromacs-test && 
-              work=work-$(hostname -s) && mkdir -p ${work} && cd ${work} && 
-              mpiexec --use-hwthread-cpus -bind-to none -np 120 env OMP_NUM_THREADS=1 \
+              source /ext3/env-chemistry.sh
+              cd /work/wang/gromacs-test 
+              index="00000${MY_POD_INDEX}"
+              index=${index: -4}
+              work=work-${index} && mkdir -p ${work} && cd ${work} 
+              mpiexec --use-hwthread-cpus -bind-to none -np 64 env OMP_NUM_THREADS=1 \
               gmx_mpi mdrun -v -s ../src/full_sys_md.tpr -deffnm full_sys_md -nsteps 5000000 > stdout.log 2>&1
 
       restartPolicy: Never
