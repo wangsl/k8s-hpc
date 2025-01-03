@@ -12,8 +12,9 @@ metadata:
     app.openshift.io/runtime-namespace: sw77-hpc-test
 
 spec:
-  parallelism: 10
+  parallelism: 40
   completions: 100
+  completionMode: Indexed
   ttlSecondsAfterFinished: 120
   selector:
     matchLabels:
@@ -51,13 +52,20 @@ spec:
               value: America/New_York
             - name: HOME
               value: /work/wang
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
           command:
             - /bin/bash
             - '-c'
             - |
-              source /ext3/env-chemistry.sh &&
-              cd /work/wang/nwchem-test && 
-              work=work-$(hostname -s) && mkdir -p ${work} && cd ${work} && 
+              source /ext3/env-chemistry.sh
+              cd /work/wang/nwchem-test
+              index="00000${MY_POD_INDEX}"
+              index=${index: -4}
+              work=work-${index} && mkdir -p ${work} && cd ${work}
               mpiexec --use-hwthread-cpus -bind-to none -np 20 env OMP_NUM_THREADS=1 nwchem ../water-20.nw > nwchem.log
+
       restartPolicy: Never
 
