@@ -1,25 +1,27 @@
 kind: Job
 apiVersion: batch/v1
 metadata:
-  name: gpu-test-03
+  name: gpu-test
   namespace: sw77-hpc-test
   labels:
-    app: gpu-test-03
-    app.kubernetes.io/component: gpu-test-03
-    app.kubernetes.io/instance: gpu-test-03
-    app.kubernetes.io/name: gpu-test-03
+    app: gpu-test
+    app.kubernetes.io/component: gpu-test
+    app.kubernetes.io/instance: gpu-test
+    app.kubernetes.io/name: gpu-test
     app.openshift.io/runtime-namespace: sw77-hpc-test
 spec:
   parallelism: 1
   completions: 1
+  completionMode: Indexed
+  ttlSecondsAfterFinished: 120
   selector:
     matchLabels:
 
   template:
     metadata:
       labels:
-        app: gpu-test-03
-        deployment: gpu-test-03
+        app: gpu-test
+        deployment: gpu-test
     spec:
       volumes:
         - name: sw77-shared
@@ -37,12 +39,12 @@ spec:
             limits:
               cpu: '4'
               memory: 50Gi
-              nvidia.com/gpu: "4"
+              nvidia.com/gpu: "2"
             requests:
               cpu: '4'
               memory: 50Gi
-              nvidia.com/gpu: "4"
-          name: gpu-test-03
+              nvidia.com/gpu: "2"
+          name: gpu-test
           volumeMounts:
             - name: sw77-shared
               mountPath: /work
@@ -51,16 +53,21 @@ spec:
             - mountPath: /dev/shm
               name: cache-volume
           image: >-
-            pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+            registry.cloud.rt.nyu.edu/sw77/chemistry:20241207
           env:
             - name: TZ
               value: America/New_York
             - name: HOME
               value: /work/wang
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
           command:
             - /bin/bash
             - '-c'
             - |
+              sleep infinity 
               pip install h5py pytorch-lightning einops && \
               cd /scratch && cp -rp /work/wang/promoters_v2-20241101 . && \
               cd promoters_v2-20241101 && python train_pylightning.py 
@@ -73,3 +80,6 @@ spec:
       - effect: NoSchedule
         key: nvidia.com/gpu
         operator: Exists
+
+# pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+# registry.cloud.rt.nyu.edu/sw77/cuda:12.6.3-ubuntu24.04-20250103

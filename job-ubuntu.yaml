@@ -2,25 +2,26 @@
 kind: Job
 apiVersion: batch/v1
 metadata:
-  name: ubuntu-tmp
+  name: ubuntu
   namespace: sw77-hpc-test
   labels:
-    app: ubuntu-tmp
-    app.kubernetes.io/component: ubuntu-tmp
-    app.kubernetes.io/instance: ubuntu-tmp
-    app.kubernetes.io/name: ubuntu-tmp
+    app: ubuntu
+    app.kubernetes.io/component: ubuntu
+    app.kubernetes.io/instance: ubuntu
+    app.kubernetes.io/name: ubuntu
     app.openshift.io/runtime-namespace: sw77-hpc-test
 
 spec:
   parallelism: 1
   completions: 1
+  completionMode: Indexed
   selector:
     matchLabels:
   template:
     metadata:
       labels:
-        app: ubuntu-tmp
-        deployment: ubuntu-tmp
+        app: ubuntu
+        deployment: ubuntu
     spec:
       volumes:
         - name: sw77-shared
@@ -33,11 +34,11 @@ spec:
         - resources:
             limits:
               cpu: '48'
-              memory: 48Gi
+              memory: 96Gi
             requests:
-              cpu: '48'
-              memory: 20Gi
-          name: ubuntu-tmp
+              cpu: '4'
+              memory: 8Gi
+          name: ubuntu
           volumeMounts:
             - name: sw77-shared
               mountPath: /work
@@ -50,11 +51,15 @@ spec:
               value: America/New_York
             - name: HOME
               value: /work/wang
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
           command:
             - /bin/bash
             - '-c'
             - |
-              hostname && \
+              hostname
               sleep infinity
       restartPolicy: Never
 

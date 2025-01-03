@@ -1,0 +1,99 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: pysages-openmm
+  namespace: sw77-hpc-test
+  labels:
+    app: pysages-openmm
+    app.kubernetes.io/component: pysages-openmm
+    app.kubernetes.io/instance: pysages-openmm
+    app.kubernetes.io/name: pysages-openmm
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+spec:
+  parallelism: 200
+  completions: 200
+  completionMode: Indexed
+  ttlSecondsAfterFinished: 120
+  selector:
+    matchLabels:
+
+  template:
+    metadata:
+      labels:
+        app: pysages-openmm
+        deployment: pysages-openmm
+    spec:
+      volumes:
+        - name: sw77-shared
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: sw77-tmp
+          emptyDir:
+            sizeLimit: 10Gi
+        - name: cache-volume
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1000Mi
+      containers:
+        - resources:
+            limits:
+              cpu: '6'
+              memory: 10Gi
+              nvidia.com/gpu: "1"
+            requests:
+              cpu: '1'
+              memory: 10Gi
+              nvidia.com/gpu: "1"
+          name: pysages-openmm
+          volumeMounts:
+            - name: sw77-shared
+              mountPath: /work
+            - mountPath: /scratch
+              name: sw77-tmp
+            - mountPath: /dev/shm
+              name: cache-volume
+          image: >-
+            registry.cloud.rt.nyu.edu/sw77/pysages:openmm-20250103
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /work/wang
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              source /ext3/env.sh
+              (
+                set -x
+                mkdir -p /work/wang/PySAGES/logs
+                cd /work/wang/PySAGES/examples/openmm && python3 forward_flux_sampling.py  --cv-start=80 --cv-distance=2 --window-number=2 --sampling-steps=50 --replicas=5
+                cd /work/wang/PySAGES/examples/openmm/abf && python3 ./alanine-dipeptide_openmm.py
+                cd /work/wang/PySAGES/examples/openmm/spectral_abf && python3 ./alanine-dipeptide.py --time-steps=25
+                cd /work/wang/PySAGES/examples/ase/abf && python3 ./water.py
+                cd /work/wang/PySAGES/examples/openmm/metad && python3 ./alanine-dipeptide.py --time-steps=25
+                cd /work/wang/PySAGES/examples/openmm/umbrella_integration && mpirun -np 6 python3 -m mpi4py.futures integration.py --replicas=5 --time-steps=1000 --mpi
+                cd /work/wang/PySAGES/examples/openmm/cv_pucker && python3 ./unbiased.py && python3 ./check_pucker.py
+                cd /work/wang/PySAGES/examples/openmm/cv_ermsd/ermsd && python3 ./unbiased.py && python3 ./check_ermsd.py
+                cd /work/wang/PySAGES/examples/openmm/cv_ermsd/ermsd_cg && python3 ./unbiased.py && python3 ./check_ermsd.py
+                cd /work/wang/PySAGES/examples/openmm/string && mpirun -np 6 python3 -m mpi4py.futures integration.py --replicas=5 --string-steps=2 --time-steps=1000 --mpi
+                cd /work/wang/PySAGES/examples/openmm/metad/nacl && python3 nacl-displacement.py --time-steps=500
+              ) > /work/wang/PySAGES/logs-$(hostname -s).log 2>&1
+              
+      restartPolicy: Never
+      tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/usage
+        operator: Equal
+        value: dedicated
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
+
+# pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+# registry.cloud.rt.nyu.edu/sw77/cuda:12.6.3-ubuntu24.04-20250103
