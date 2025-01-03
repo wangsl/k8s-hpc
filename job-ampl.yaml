@@ -10,17 +10,12 @@ metadata:
     app.kubernetes.io/instance: ampl
     app.kubernetes.io/name: ampl
     app.openshift.io/runtime-namespace: sw77-hpc-test
-  annotations:
-     k8s.v1.cni.cncf.io/networks: '[
-      {
-        "name": "ovn-kubernetes", 
-        "ips": [ ], 
-        "mac": "CA:FE:C0:FF:EE:00" 
-      }
-    ]'
+
 spec:
-  parallelism: 1
-  completions: 1
+  parallelism: 1000
+  completions: 1000
+  completionMode: Indexed
+  ttlSecondsAfterFinished: 120
   selector:
     matchLabels:
   template:
@@ -35,14 +30,14 @@ spec:
             claimName: sw77-shared
         - name: sw77-tmp
           emptyDir:
-            sizeLimit: 100Gi
+            sizeLimit: 10Gi
       containers:
         - resources:
             limits:
-              cpu: '2'
-              memory: 2Gi
+              cpu: '1'
+              memory: 20Gi
             requests:
-              cpu: '2'
+              cpu: '1'
               memory: 2Gi
           name: ampl
           volumeMounts:
@@ -51,17 +46,43 @@ spec:
             - mountPath: /scratch
               name: sw77-tmp
           image: >-
-             registry.cloud.rt.nyu.edu/sw77/ubuntu:24.04-20241204
+            registry.cloud.rt.nyu.edu/sw77/ampl:14.0.0-20250102
           env:
             - name: TZ
               value: America/New_York
             - name: HOME
               value: /work/wang
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: MY_POD_SERVICE_ACCOUNT
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.serviceAccountName
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
           command:
             - /bin/bash
             - '-c'
             - |
-              hostname && \
-              sleep infinity
-      restartPolicy: Never
+              cd /work/wang/ampl-test/rc5176 && mkdir -p hpc_runs/logs
+              index="00000${MY_POD_INDEX}"
+              index=${index: -4}
+              /work/wang/ampl-test/ampl/run-ampl.bash python3 staircase.py ${MY_POD_INDEX} > hpc_runs/logs/${index}.log 2>&1
 
+      restartPolicy: Never
