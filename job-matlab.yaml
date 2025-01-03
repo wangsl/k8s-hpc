@@ -1,0 +1,63 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: matlab
+  namespace: sw77-hpc-test
+  labels:
+    app: matlab
+    app.kubernetes.io/component: matlab
+    app.kubernetes.io/instance: matlab
+    app.kubernetes.io/name: matlab
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+
+spec:
+  parallelism: 10
+  completions: 200
+  ttlSecondsAfterFinished: 120
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+        app: matlab
+        deployment: matlab
+    spec:
+      volumes:
+        - name: sw77-shared
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: sw77-tmp
+          emptyDir:
+            sizeLimit: 10Gi
+      containers:
+        - resources:
+            limits:
+              cpu: '32'
+              memory: 10Gi
+            requests:
+              cpu: '32'
+              memory: 5Gi
+          name: matlab
+          volumeMounts:
+            - name: sw77-shared
+              mountPath: /work
+            - mountPath: /scratch
+              name: sw77-tmp
+          image: >-
+             registry.cloud.rt.nyu.edu/sw77/matlab:2024b
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /work/wang
+            - name: MLM_LICENSE_FILE
+              value: 27000@lm2.its.nyu.edu,27000@lm3.its.nyu.edu,27000@lm4.its.nyu.edu
+          command:
+            - /bin/bash
+            - '-c'
+            - cd /work/wang/matlab-test/parfor-prefdir &&
+              bash run-matlab.sbatch > matlab-$(hostname -s).log 2>&1
+              
+      restartPolicy: Never
+

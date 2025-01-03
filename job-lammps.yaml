@@ -1,0 +1,65 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: lammps
+  namespace: sw77-hpc-test
+  labels:
+    app: lammps
+    app.kubernetes.io/component: lammps
+    app.kubernetes.io/instance: lammps
+    app.kubernetes.io/name: lammps
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+
+spec:
+  parallelism: 40
+  completions: 100
+  ttlSecondsAfterFinished: 120
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+        app: lammps
+        deployment: lammps
+    spec:
+      volumes:
+        - name: sw77-shared
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: sw77-tmp
+          emptyDir:
+            sizeLimit: 10Gi
+      containers:
+        - resources:
+            limits:
+              cpu: '20'
+              memory: 20Gi
+            requests:
+              cpu: '20'
+              memory: 10Gi
+          name: lammps
+          volumeMounts:
+            - name: sw77-shared
+              mountPath: /work
+            - mountPath: /scratch
+              name: sw77-tmp
+          image: >-
+             registry.cloud.rt.nyu.edu/sw77/chemistry:20241207
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /work/wang
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              source /ext3/env-chemistry.sh && 
+              cd /work/wang/lammps-test && 
+              work=work-$(hostname -s) && rm -rf ${work} && cp -rp src ${work} &&
+              cd ${work} && 
+              mpiexec --use-hwthread-cpus -bind-to none -np 20 env OMP_NUM_THREADS=1 \
+              lmp -in in.1 > stdout.log 2>&1
+      restartPolicy: Never
+

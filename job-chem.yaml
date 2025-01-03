@@ -1,0 +1,91 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: chem-test
+  namespace: sw77-hpc-test
+  labels:
+    app: chem-test
+    app.kubernetes.io/component: chem-test
+    app.kubernetes.io/instance: chem-test
+    app.kubernetes.io/name: chem-test
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+
+spec:
+  parallelism: 10
+  completions: 20
+  completionMode: Indexed
+  ttlSecondsAfterFinished: 120
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+        app: chem-test
+        deployment: chem-test
+    spec:
+      volumes:
+        - name: sw77-shared
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: sw77-tmp
+          emptyDir:
+            sizeLimit: 10Gi
+      containers:
+        - resources:
+            limits:
+              cpu: '10'
+              memory: 40Gi
+            requests:
+              cpu: '2'
+              memory: 4Gi
+          name: chem-test
+          volumeMounts:
+            - name: sw77-shared
+              mountPath: /work
+            - mountPath: /scratch
+              name: sw77-tmp
+          image: >-
+             registry.cloud.rt.nyu.edu/sw77/chemistry:20241207
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /work/wang
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: MY_POD_SERVICE_ACCOUNT
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.serviceAccountName
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              sleep infinity && 
+              source /ext3/env-chemistry.sh &&
+              cd /work/wang/nwchem-test && 
+              work=work-$(hostname -s) && mkdir -p ${work} && cd ${work} && 
+              mpiexec --use-hwthread-cpus -bind-to none -np 20 env OMP_NUM_THREADS=1 nwchem ../water-20.nw > nwchem.log
+
+      restartPolicy: Never
+
+      

@@ -1,0 +1,64 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: gromacs
+  namespace: sw77-hpc-test
+  labels:
+    app: gromacs
+    app.kubernetes.io/component: gromacs
+    app.kubernetes.io/instance: gromacs
+    app.kubernetes.io/name: gromacs
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+
+spec:
+  parallelism: 10
+  completions: 100
+  ttlSecondsAfterFinished: 120
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+        app: gromacs
+        deployment: gromacs
+    spec:
+      volumes:
+        - name: sw77-shared
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: sw77-tmp
+          emptyDir:
+            sizeLimit: 5Gi
+      containers:
+        - resources:
+            limits:
+              cpu: '120'
+              memory: 40Gi
+            requests:
+              cpu: '120'
+              memory: 20Gi
+          name: gromacs
+          volumeMounts:
+            - name: sw77-shared
+              mountPath: /work
+            - mountPath: /scratch
+              name: sw77-tmp
+          image: >-
+             registry.cloud.rt.nyu.edu/sw77/chemistry:20241207
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /work/wang
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              source /ext3/env-chemistry.sh && 
+              cd /work/wang/gromacs-test && 
+              work=work-$(hostname -s) && mkdir -p ${work} && cd ${work} && 
+              mpiexec --use-hwthread-cpus -bind-to none -np 120 env OMP_NUM_THREADS=1 \
+              gmx_mpi mdrun -v -s ../src/full_sys_md.tpr -deffnm full_sys_md -nsteps 5000000 > stdout.log 2>&1
+
+      restartPolicy: Never

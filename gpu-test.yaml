@@ -1,0 +1,75 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: gpu-test-03
+  namespace: sw77-hpc-test
+  labels:
+    app: gpu-test-03
+    app.kubernetes.io/component: gpu-test-03
+    app.kubernetes.io/instance: gpu-test-03
+    app.kubernetes.io/name: gpu-test-03
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+spec:
+  parallelism: 1
+  completions: 1
+  selector:
+    matchLabels:
+
+  template:
+    metadata:
+      labels:
+        app: gpu-test-03
+        deployment: gpu-test-03
+    spec:
+      volumes:
+        - name: sw77-shared
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: sw77-tmp
+          emptyDir:
+            sizeLimit: 100Gi
+        - name: cache-volume
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1000Mi
+      containers:
+        - resources:
+            limits:
+              cpu: '4'
+              memory: 50Gi
+              nvidia.com/gpu: "4"
+            requests:
+              cpu: '4'
+              memory: 50Gi
+              nvidia.com/gpu: "4"
+          name: gpu-test-03
+          volumeMounts:
+            - name: sw77-shared
+              mountPath: /work
+            - mountPath: /scratch
+              name: sw77-tmp
+            - mountPath: /dev/shm
+              name: cache-volume
+          image: >-
+            pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /work/wang
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              pip install h5py pytorch-lightning einops && \
+              cd /scratch && cp -rp /work/wang/promoters_v2-20241101 . && \
+              cd promoters_v2-20241101 && python train_pylightning.py 
+      restartPolicy: Never
+      tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/usage
+        operator: Equal
+        value: dedicated
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists

@@ -1,0 +1,60 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: ubuntu-tmp
+  namespace: sw77-hpc-test
+  labels:
+    app: ubuntu-tmp
+    app.kubernetes.io/component: ubuntu-tmp
+    app.kubernetes.io/instance: ubuntu-tmp
+    app.kubernetes.io/name: ubuntu-tmp
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+
+spec:
+  parallelism: 1
+  completions: 1
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+        app: ubuntu-tmp
+        deployment: ubuntu-tmp
+    spec:
+      volumes:
+        - name: sw77-shared
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: sw77-tmp
+          emptyDir:
+            sizeLimit: 100Gi
+      containers:
+        - resources:
+            limits:
+              cpu: '48'
+              memory: 48Gi
+            requests:
+              cpu: '48'
+              memory: 20Gi
+          name: ubuntu-tmp
+          volumeMounts:
+            - name: sw77-shared
+              mountPath: /work
+            - mountPath: /scratch
+              name: sw77-tmp
+          image: >-
+             registry.cloud.rt.nyu.edu/sw77/ubuntu:24.04-20241204
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /work/wang
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              hostname && \
+              sleep infinity
+      restartPolicy: Never
+

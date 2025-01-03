@@ -1,0 +1,63 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: nwchem
+  namespace: sw77-hpc-test
+  labels:
+    app: nwchem
+    app.kubernetes.io/component: nwchem
+    app.kubernetes.io/instance: nwchem
+    app.kubernetes.io/name: nwchem
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+
+spec:
+  parallelism: 10
+  completions: 100
+  ttlSecondsAfterFinished: 120
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+        app: nwchem
+        deployment: nwchem
+    spec:
+      volumes:
+        - name: sw77-shared
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: sw77-tmp
+          emptyDir:
+            sizeLimit: 10Gi
+      containers:
+        - resources:
+            limits:
+              cpu: '20'
+              memory: 20Gi
+            requests:
+              cpu: '20'
+              memory: 10Gi
+          name: nwchem
+          volumeMounts:
+            - name: sw77-shared
+              mountPath: /work
+            - mountPath: /scratch
+              name: sw77-tmp
+          image: >-
+             registry.cloud.rt.nyu.edu/sw77/chemistry:20241207
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /work/wang
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              source /ext3/env-chemistry.sh &&
+              cd /work/wang/nwchem-test && 
+              work=work-$(hostname -s) && mkdir -p ${work} && cd ${work} && 
+              mpiexec --use-hwthread-cpus -bind-to none -np 20 env OMP_NUM_THREADS=1 nwchem ../water-20.nw > nwchem.log
+      restartPolicy: Never
+

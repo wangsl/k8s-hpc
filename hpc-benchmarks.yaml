@@ -1,0 +1,74 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: hpc-benchmarks
+  namespace: sw77-hpc-test
+  labels:
+    app: hpc-benchmarks
+    app.kubernetes.io/component: hpc-benchmarks
+    app.kubernetes.io/instance: hpc-benchmarks
+    app.kubernetes.io/name: hpc-benchmarks
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+spec:
+  parallelism: 2
+  completions: 2
+  selector:
+    matchLabels:
+
+  template:
+    metadata:
+      labels:
+        app: hpc-benchmarks
+        deployment: hpc-benchmarks
+    spec:
+      volumes:
+        - name: sw77-shared
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: sw77-tmp
+          emptyDir:
+            sizeLimit: 100Gi
+        - name: cache-volume
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1000Mi
+      containers:
+        - resources:
+            limits:
+              cpu: '4'
+              memory: 20Gi
+              nvidia.com/gpu: "4"
+            requests:
+              cpu: '4'
+              memory: 20Gi
+              nvidia.com/gpu: "4"
+          name: hpc-benchmarks
+          volumeMounts:
+            - name: sw77-shared
+              mountPath: /work
+            - mountPath: /scratch
+              name: sw77-tmp
+            - mountPath: /dev/shm
+              name: cache-volume
+          image: >-
+            nvcr.io/nvidia/hpc-benchmarks:24.09
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /work/wang
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              hostname && \
+              sleep infinity
+      restartPolicy: Never
+      tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/usage
+        operator: Equal
+        value: dedicated
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists

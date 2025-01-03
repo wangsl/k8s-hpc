@@ -1,0 +1,67 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: ampl
+  namespace: sw77-hpc-test
+  labels:
+    app: ampl
+    app.kubernetes.io/component: ampl
+    app.kubernetes.io/instance: ampl
+    app.kubernetes.io/name: ampl
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+  annotations:
+     k8s.v1.cni.cncf.io/networks: '[
+      {
+        "name": "ovn-kubernetes", 
+        "ips": [ ], 
+        "mac": "CA:FE:C0:FF:EE:00" 
+      }
+    ]'
+spec:
+  parallelism: 1
+  completions: 1
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+        app: ampl
+        deployment: ampl
+    spec:
+      volumes:
+        - name: sw77-shared
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: sw77-tmp
+          emptyDir:
+            sizeLimit: 100Gi
+      containers:
+        - resources:
+            limits:
+              cpu: '2'
+              memory: 2Gi
+            requests:
+              cpu: '2'
+              memory: 2Gi
+          name: ampl
+          volumeMounts:
+            - name: sw77-shared
+              mountPath: /work
+            - mountPath: /scratch
+              name: sw77-tmp
+          image: >-
+             registry.cloud.rt.nyu.edu/sw77/ubuntu:24.04-20241204
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /work/wang
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              hostname && \
+              sleep infinity
+      restartPolicy: Never
+
