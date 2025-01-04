@@ -13,7 +13,7 @@ metadata:
 
 spec:
   parallelism: 1000
-  completions: 2000
+  completions: 1000
   completionMode: Indexed
   selector:
     matchLabels:
@@ -29,30 +29,34 @@ spec:
             claimName: sw77-shared
         - name: tmp
           emptyDir:
-            sizeLimit: 10Gi
+            sizeLimit: 2Gi
         - name: license
           emptyDir:
-            sizeLimit: 100Mi
+            sizeLimit: 10Mi
+            medium: Memory
         - name: dot-schrodinger
           emptyDir:
-            sizeLimit: 1Gi
+            sizeLimit: 100Mi
         - name: cache
           emptyDir:
-            sizeLimit: 1Gi
+            sizeLimit: 50Mi
+            #medium: Memory
         - name: var-tmp
           emptyDir:
-            sizeLimit: 100Mi
+            sizeLimit: 1Mi
+            medium: Memory
         - name: usr-tmp
           emptyDir:
-            sizeLimit: 100Mi
+            sizeLimit: 1Mi
+            medium: Memory
       containers:
         - resources:
             limits:
-              cpu: '48'
-              memory: 96Gi
+              cpu: '8'
+              memory: 10Gi
             requests:
               cpu: '8'
-              memory: 8Gi
+              memory: 4Gi
           name: schrodinger
           volumeMounts:
             - name: home
@@ -88,6 +92,6 @@ spec:
               index="00000${MY_POD_INDEX}"
               index=${index: -4}
               work=work-${index} && rm -rf ${work} && mkdir -p ${work} && cd ${work}
-              /home/wang/schrodinger/setups/run-schrodinger.bash /home/wang/schrodinger/geopt/run-loop.bash
+              /home/wang/schrodinger/setups/run-schrodinger.bash /home/wang/schrodinger/geopt/loop.bash
               #/home/wang/schrodinger/setups/run-schrodinger.bash jaguar run -HOST localhost -PARALLEL 8 -NOJOBID -WAIT -t -scr /tmp/$$ geopt.in > stdout.log 2>&1 
       restartPolicy: Never
