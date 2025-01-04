@@ -25,12 +25,13 @@ spec:
         deployment: ampl
     spec:
       volumes:
-        - name: sw77-shared
+        - name: home
           persistentVolumeClaim:
             claimName: sw77-shared
-        - name: sw77-tmp
+        - name: tmp
           emptyDir:
             sizeLimit: 1Gi
+            medium: Memory
       containers:
         - resources:
             limits:
@@ -41,10 +42,10 @@ spec:
               memory: 2Gi
           name: ampl
           volumeMounts:
-            - name: sw77-shared
-              mountPath: /work
-            - mountPath: /scratch
-              name: sw77-tmp
+            - name: home
+              mountPath: /home
+            - name: tmp
+              mountPath: /tmp
           image: >-
             registry.cloud.rt.nyu.edu/sw77/ampl:14.0.0-20250102
           env:
@@ -80,9 +81,9 @@ spec:
             - /bin/bash
             - '-c'
             - |
-              cd /work/wang/ampl-test/rc5176 && mkdir -p hpc_runs/logs
+              cd /home/wang/ampl-test/rc5176 && mkdir -p hpc_runs/logs
               index="00000${MY_POD_INDEX}"
               index=${index: -4}
-              /work/wang/ampl-test/ampl/run-ampl.bash python3 staircase.py ${MY_POD_INDEX} > hpc_runs/logs/${index}.log 2>&1
+              /home/wang/ampl-test/ampl/run-ampl.bash python3 staircase.py ${MY_POD_INDEX} > hpc_runs/logs/${index}.log 2>&1
 
       restartPolicy: Never
