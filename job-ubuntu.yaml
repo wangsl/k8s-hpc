@@ -24,12 +24,15 @@ spec:
         deployment: ubuntu
     spec:
       volumes:
-        - name: sw77-shared
+        - name: work
           persistentVolumeClaim:
             claimName: sw77-shared
-        - name: sw77-tmp
+        - name: tmp
           emptyDir:
-            sizeLimit: 100Gi
+            sizeLimit: 20Gi
+        - name: license
+          emptyDir:
+            sizeLimit: 1Gi
       containers:
         - resources:
             limits:
@@ -40,17 +43,19 @@ spec:
               memory: 8Gi
           name: ubuntu
           volumeMounts:
-            - name: sw77-shared
-              mountPath: /work
-            - mountPath: /scratch
-              name: sw77-tmp
+            - name: work
+              mountPath: /home
+            - name: tmp
+              mountPath: /tmp
+            - name: license
+              mountPath: /license
           image: >-
-             registry.cloud.rt.nyu.edu/sw77/ubuntu:22.04-20250103
+             registry.cloud.rt.nyu.edu/sw77/ubuntu:24.04-20241204
           env:
             - name: TZ
               value: America/New_York
             - name: HOME
-              value: /work/wang
+              value: /home/wang
             - name: MY_POD_INDEX
               valueFrom:
                 fieldRef:

@@ -1,0 +1,93 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: schrodinger
+  namespace: sw77-hpc-test
+  labels:
+    app: schrodinger
+    app.kubernetes.io/component: schrodinger
+    app.kubernetes.io/instance: schrodinger
+    app.kubernetes.io/name: schrodinger
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+
+spec:
+  parallelism: 1000
+  completions: 2000
+  completionMode: Indexed
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+        app: schrodinger
+        deployment: schrodinger
+    spec:
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: tmp
+          emptyDir:
+            sizeLimit: 10Gi
+        - name: license
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: dot-schrodinger
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: cache
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: var-tmp
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: usr-tmp
+          emptyDir:
+            sizeLimit: 100Mi
+      containers:
+        - resources:
+            limits:
+              cpu: '48'
+              memory: 96Gi
+            requests:
+              cpu: '8'
+              memory: 8Gi
+          name: schrodinger
+          volumeMounts:
+            - name: home
+              mountPath: /home
+            - name: tmp
+              mountPath: /tmp
+            - name: license
+              mountPath: /license
+            - name: dot-schrodinger
+              mountPath: /home/wang/.schrodinger
+            - name: cache
+              mountPath: /home/wang/.cache
+            - name: var-tmp
+              mountPath: /var/tmp
+            - name: usr-tmp
+              mountPath: /usr/tmp
+          image: >-
+             registry.cloud.rt.nyu.edu/sw77/schrodinger:2024.4
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /home/wang
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              cd /home/wang/schrodinger/geopt
+              index="00000${MY_POD_INDEX}"
+              index=${index: -4}
+              work=work-${index} && rm -rf ${work} && mkdir -p ${work} && cd ${work}
+              /home/wang/schrodinger/setups/run-schrodinger.bash /home/wang/schrodinger/geopt/run-loop.bash
+              #/home/wang/schrodinger/setups/run-schrodinger.bash jaguar run -HOST localhost -PARALLEL 8 -NOJOBID -WAIT -t -scr /tmp/$$ geopt.in > stdout.log 2>&1 
+      restartPolicy: Never
