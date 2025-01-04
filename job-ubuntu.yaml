@@ -45,7 +45,7 @@ spec:
             - mountPath: /scratch
               name: sw77-tmp
           image: >-
-             registry.cloud.rt.nyu.edu/sw77/ubuntu:24.04-20241204
+             registry.cloud.rt.nyu.edu/sw77/ubuntu:22.04-20250103
           env:
             - name: TZ
               value: America/New_York

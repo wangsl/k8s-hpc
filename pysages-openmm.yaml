@@ -30,7 +30,7 @@ spec:
             claimName: sw77-shared
         - name: sw77-tmp
           emptyDir:
-            sizeLimit: 10Gi
+            sizeLimit: 1Gi
         - name: cache-volume
           emptyDir:
             medium: Memory
@@ -83,7 +83,7 @@ spec:
                 cd /work/wang/PySAGES/examples/openmm/cv_ermsd/ermsd_cg && python3 ./unbiased.py && python3 ./check_ermsd.py
                 cd /work/wang/PySAGES/examples/openmm/string && mpirun -np 6 python3 -m mpi4py.futures integration.py --replicas=5 --string-steps=2 --time-steps=1000 --mpi
                 cd /work/wang/PySAGES/examples/openmm/metad/nacl && python3 nacl-displacement.py --time-steps=500
-              ) > /work/wang/PySAGES/logs-$(hostname -s).log 2>&1
+              ) > /work/wang/PySAGES/logs/logs-$(hostname -s).log 2>&1
               
       restartPolicy: Never
       tolerations:
@@ -94,6 +94,3 @@ spec:
       - effect: NoSchedule
         key: nvidia.com/gpu
         operator: Exists
-
-# pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
-# registry.cloud.rt.nyu.edu/sw77/cuda:12.6.3-ubuntu24.04-20250103

@@ -30,7 +30,7 @@ spec:
             claimName: sw77-shared
         - name: sw77-tmp
           emptyDir:
-            sizeLimit: 10Gi
+            sizeLimit: 1Gi
       containers:
         - resources:
             limits:
