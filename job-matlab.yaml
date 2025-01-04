@@ -12,8 +12,9 @@ metadata:
     app.openshift.io/runtime-namespace: sw77-hpc-test
 
 spec:
-  parallelism: 10
+  parallelism: 100
   completions: 200
+  completionMode: Indexed
   ttlSecondsAfterFinished: 120
   selector:
     matchLabels:
@@ -24,40 +25,65 @@ spec:
         deployment: matlab
     spec:
       volumes:
-        - name: sw77-shared
+        - name: home
           persistentVolumeClaim:
             claimName: sw77-shared
-        - name: sw77-tmp
+        - name: tmp
           emptyDir:
-            sizeLimit: 10Gi
+            sizeLimit: 1Gi
+        - name: matlab
+          emptyDir:
+            sizeLimit: 10Mi
+        - name: math-works
+          emptyDir:
+            sizeLimit: 10Mi
+        - name: service-host
+          emptyDir:
+            sizeLimit: 1Mi
+        - name: matlab-connector
+          emptyDir:
+            sizeLimit: 10Mi
       containers:
         - resources:
             limits:
               cpu: '32'
-              memory: 10Gi
+              memory: 60Gi
             requests:
               cpu: '32'
               memory: 5Gi
           name: matlab
           volumeMounts:
-            - name: sw77-shared
-              mountPath: /work
-            - mountPath: /scratch
-              name: sw77-tmp
+            - name: home
+              mountPath: /home
+            - name: tmp
+              mountPath: /tmp
+            - name: matlab
+              mountPath: /home/wang/.matlab
+            - name: math-works
+              mountPath: /home/wang/.MathWorks
+            - name: service-host
+              mountPath: /home/wang/.MathWorks/ServiceHost
+              readOnly: true
+            - name: matlab-connector
+              mountPath: /home/wang/.MATLABConnector
           image: >-
              registry.cloud.rt.nyu.edu/sw77/matlab:2024b
           env:
             - name: TZ
               value: America/New_York
             - name: HOME
-              value: /work/wang
+              value: /home/wang
             - name: MLM_LICENSE_FILE
               value: 27000@lm2.its.nyu.edu,27000@lm3.its.nyu.edu,27000@lm4.its.nyu.edu
+            - name: MATLAB_PREFDIR
+              value: /tmp/matlab
+            - name: MATLAB_LOG_DIR 
+              value: /tmp/matlab
           command:
             - /bin/bash
             - '-c'
-            - cd /work/wang/matlab-test/parfor-prefdir &&
-              bash run-matlab.sbatch > matlab-$(hostname -s).log 2>&1
-              
+            - | 
+              cd /home/wang/matlab-test/parfor-prefdir 
+              bash run-matlab.sbatch > stdout-$(hostname -s).log 2>&1
       restartPolicy: Never
 
