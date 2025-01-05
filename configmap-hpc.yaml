@@ -1,0 +1,11 @@
+
+kind: ConfigMap
+apiVersion: v1
+data:
+  machine-id-371a9b27af5d4d25932b66781d73942: |
+    371a9b27af5d4d25932b66781d73942
+  etc-passwd-1002240000: |
+    wang:x:1002240000:0:Shenglong Wang:/home/wang:/bin/bash
+metadata:
+  name: hpc
+  namespace: sw77-hpc-test

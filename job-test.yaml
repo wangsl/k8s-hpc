@@ -1,0 +1,75 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: test
+  namespace: sw77-hpc-test
+  labels:
+    app: test
+    app.kubernetes.io/component: test
+    app.kubernetes.io/instance: test
+    app.kubernetes.io/name: test
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+
+spec:
+  parallelism: 1
+  completions: 1
+  completionMode: Indexed
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+        app: test
+        deployment: test
+    spec:
+      hostname: cs001
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: etc-passwd
+          configMap:
+            name: hpc
+      containers:
+        - resources:
+            limits:
+              cpu: '48'
+              memory: 96Gi
+            requests:
+              cpu: '4'
+              memory: 8Gi
+          name: test
+          volumeMounts:
+            - name: home
+              mountPath: /home
+            - name: tmp
+              mountPath: /tmp
+            - name: etc-passwd
+              mountPath: /etc/passwd
+              subPath: etc-passwd-1002240000
+              readOnly: true
+          image: >-
+             registry.cloud.rt.nyu.edu/sw77/ubuntu:24.04-20241204
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /home/wang
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+          workingDir: /home/wang
+          securityContext:
+            runAsUser: 1002240000
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              sleep infinity
+      restartPolicy: Never
+

@@ -12,8 +12,8 @@ metadata:
     app.openshift.io/runtime-namespace: sw77-hpc-test
 
 spec:
-  parallelism: 100
-  completions: 200
+  parallelism: 1
+  completions: 1
   completionMode: Indexed
   ttlSecondsAfterFinished: 120
   selector:
@@ -46,11 +46,11 @@ spec:
       containers:
         - resources:
             limits:
-              cpu: '32'
-              memory: 60Gi
+              cpu: '180'
+              memory: 900Gi
             requests:
-              cpu: '32'
-              memory: 5Gi
+              cpu: '180'
+              memory: 900Gi
           name: matlab
           volumeMounts:
             - name: home
@@ -83,6 +83,7 @@ spec:
             - /bin/bash
             - '-c'
             - | 
+              sleep infinity
               cd /home/wang/matlab-test/parfor-prefdir 
               bash run-matlab.sbatch > stdout-$(hostname -s).log 2>&1
       restartPolicy: Never
