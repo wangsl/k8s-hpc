@@ -49,6 +49,9 @@ spec:
           emptyDir:
             sizeLimit: 1Mi
             medium: Memory
+        - name: etc-passwd
+          configMap:
+            name: hpc
       containers:
         - resources:
             limits:
@@ -73,6 +76,10 @@ spec:
               mountPath: /var/tmp
             - name: usr-tmp
               mountPath: /usr/tmp
+            - name: etc-passwd
+              mountPath: /etc/passwd
+              subPath: etc-passwd-1002240000
+              readOnly: true
           image: >-
              registry.cloud.rt.nyu.edu/sw77/schrodinger:2024.4
           env:
@@ -84,6 +91,9 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+          workingDir: /home/wang
+          securityContext:
+            runAsUser: 1002240000
           command:
             - /bin/bash
             - '-c'
