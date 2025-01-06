@@ -12,7 +12,7 @@ metadata:
     app.openshift.io/runtime-namespace: sw77-hpc-test
 
 spec:
-  parallelism: 40
+  parallelism: 50
   completions: 100
   completionMode: Indexed
   ttlSecondsAfterFinished: 120
@@ -25,12 +25,15 @@ spec:
         deployment: nwchem
     spec:
       volumes:
-        - name: sw77-shared
+        - name: home
           persistentVolumeClaim:
             claimName: sw77-shared
-        - name: sw77-tmp
+        - name: tmp
           emptyDir:
-            sizeLimit: 10Gi
+            sizeLimit: 1Gi
+        - name: etc-passwd
+          configMap:
+            name: hpc
       containers:
         - resources:
             limits:
@@ -41,31 +44,39 @@ spec:
               memory: 10Gi
           name: nwchem
           volumeMounts:
-            - name: sw77-shared
-              mountPath: /work
-            - mountPath: /scratch
-              name: sw77-tmp
+            - name: home
+              mountPath: /home
+            - name: tmp
+              mountPath: /tmp
+            - name: etc-passwd
+              mountPath: /etc/passwd
+              subPath: etc-passwd-1002240000
+              readOnly: true
           image: >-
              registry.cloud.rt.nyu.edu/sw77/chemistry:20241207
           env:
             - name: TZ
               value: America/New_York
             - name: HOME
-              value: /work/wang
+              value: /home/wang
+            - name: USER
+              value: wang
             - name: MY_POD_INDEX
               valueFrom:
                 fieldRef:
                   fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+          workingDir: /home/wang
+          securityContext:
+            runAsUser: 1002240000
           command:
             - /bin/bash
             - '-c'
             - |
               source /ext3/env-chemistry.sh
-              cd /work/wang/nwchem-test
+              cd /home/wang/nwchem-test
               index="00000${MY_POD_INDEX}"
               index=${index: -4}
               work=work-${index} && mkdir -p ${work} && cd ${work}
-              mpiexec --use-hwthread-cpus -bind-to none -np 20 env OMP_NUM_THREADS=1 nwchem ../water-20.nw > nwchem.log
-
+              mpiexec --use-hwthread-cpus -bind-to none -np 20 env OMP_NUM_THREADS=1 nwchem ../water-20.nw > nwchem.log 2>&1
       restartPolicy: Never
 

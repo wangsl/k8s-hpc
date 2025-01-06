@@ -12,7 +12,7 @@ metadata:
     app.openshift.io/runtime-namespace: sw77-hpc-test
 
 spec:
-  parallelism: 1000
+  parallelism: 500
   completions: 1000
   completionMode: Indexed
   ttlSecondsAfterFinished: 120
@@ -32,6 +32,9 @@ spec:
           emptyDir:
             sizeLimit: 1Gi
             medium: Memory
+        - name: etc-passwd
+          configMap:
+            name: hpc
       containers:
         - resources:
             limits:
@@ -46,13 +49,19 @@ spec:
               mountPath: /home
             - name: tmp
               mountPath: /tmp
+            - name: etc-passwd
+              mountPath: /etc/passwd
+              subPath: etc-passwd-1002240000
+              readOnly: true
           image: >-
             registry.cloud.rt.nyu.edu/sw77/ampl:14.0.0-20250102
           env:
             - name: TZ
               value: America/New_York
             - name: HOME
-              value: /work/wang
+              value: /home/wang
+            - name: USER
+              value: wang
             - name: MY_NODE_NAME
               valueFrom:
                 fieldRef:
@@ -77,6 +86,9 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+          workingDir: /home/wang
+          securityContext:
+            runAsUser: 1002240000
           command:
             - /bin/bash
             - '-c'

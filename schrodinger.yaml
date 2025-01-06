@@ -12,9 +12,10 @@ metadata:
     app.openshift.io/runtime-namespace: sw77-hpc-test
 
 spec:
-  parallelism: 1000
+  parallelism: 200
   completions: 1000
   completionMode: Indexed
+  ttlSecondsAfterFinished: 120
   backoffLimitPerIndex: 1  # maximal number of failures per index
   maxFailedIndexes: 5 
   selector:
