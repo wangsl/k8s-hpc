@@ -15,6 +15,8 @@ spec:
   parallelism: 1000
   completions: 1000
   completionMode: Indexed
+  backoffLimitPerIndex: 1  # maximal number of failures per index
+  maxFailedIndexes: 5 
   selector:
     matchLabels:
   template:
@@ -87,6 +89,8 @@ spec:
               value: America/New_York
             - name: HOME
               value: /home/wang
+            - name: USER
+              value: wang
             - name: MY_POD_INDEX
               valueFrom:
                 fieldRef:
@@ -98,7 +102,7 @@ spec:
             - /bin/bash
             - '-c'
             - |
-              cd /home/wang/schrodinger/geopt
+              cd /home/wang/schrodinger/geopt/work
               index="00000${MY_POD_INDEX}"
               index=${index: -4}
               work=work-${index} && rm -rf ${work} && mkdir -p ${work} && cd ${work}

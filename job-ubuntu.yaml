@@ -33,6 +33,9 @@ spec:
         - name: license
           emptyDir:
             sizeLimit: 1Gi
+        - name: etc-passwd
+          configMap:
+            name: hpc
       containers:
         - resources:
             limits:
@@ -49,6 +52,10 @@ spec:
               mountPath: /tmp
             - name: license
               mountPath: /license
+            - name: etc-passwd
+              mountPath: /etc/passwd
+              subPath: etc-passwd-1002240000
+              readOnly: true
           image: >-
              registry.cloud.rt.nyu.edu/sw77/ubuntu:24.04-20241204
           env:
@@ -56,15 +63,19 @@ spec:
               value: America/New_York
             - name: HOME
               value: /home/wang
+            - name: USER
+              value: wang
             - name: MY_POD_INDEX
               valueFrom:
                 fieldRef:
                   fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+          workingDir: /home/wang
+          securityContext:
+            runAsUser: 1002240000
           command:
             - /bin/bash
             - '-c'
             - |
-              hostname
               sleep infinity
       restartPolicy: Never
 
