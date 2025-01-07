@@ -1,0 +1,91 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: mathematica
+  namespace: sw77-hpc-test
+  labels:
+    app: mathematica
+    app.kubernetes.io/component: mathematica
+    app.kubernetes.io/instance: mathematica
+    app.kubernetes.io/name: mathematica
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+
+spec:
+  parallelism: 1
+  completions: 1
+  completionMode: Indexed
+  ttlSecondsAfterFinished: 120
+  backoffLimitPerIndex: 1  # maximal number of failures per index
+  maxFailedIndexes: 5 
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+        app: mathematica
+        deployment: mathematica
+    spec:
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: tmp
+          emptyDir:
+            sizeLimit: 2Gi
+        - name: cache
+          emptyDir:
+            sizeLimit: 50Mi
+            #medium: Memory
+        - name: etc-passwd
+          configMap:
+            name: hpc
+        - name: mathpass
+          configMap:
+            name: hpc
+      containers:
+        - resources:
+            limits:
+              cpu: '24'
+              memory: 96Gi
+            requests:
+              cpu: '4'
+              memory: 8Gi
+          name: mathematica
+          volumeMounts:
+            - name: home
+              mountPath: /home
+            - name: tmp
+              mountPath: /tmp
+            - name: etc-passwd
+              mountPath: /etc/passwd
+              subPath: etc-passwd-1002240000
+              readOnly: true
+            - name: mathpass
+              mountPath: /ext3/mathematica/14.1.0/Configuration/Licensing/mathpass
+              subPath: mathematica-mathpass
+              readOnly: true
+          image: >-
+             registry.cloud.rt.nyu.edu/sw77/mathematica:14.1.0
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /home/wang
+            - name: USER
+              value: wang
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+          workingDir: /home/wang
+          securityContext:
+            runAsUser: 1002240000
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              source /ext3/mathematica/14.1.0/env.sh
+              cd /home/wang/mathematica-test
+              math < Logx2G.mma > Logx2G.log 2>&1
+      restartPolicy: Never

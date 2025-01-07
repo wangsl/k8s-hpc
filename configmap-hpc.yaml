@@ -6,6 +6,10 @@ data:
     371a9b27af5d4d25932b66781d73942
   etc-passwd-1002240000: |
     wang:x:1002240000:0:Shenglong Wang:/home/wang:/bin/bash
+  mathematica-mathpass: |
+    !lm2.its.nyu.edu
+    !lm3.its.nyu.edu
+    !lm4.its.nyu.edu
 metadata:
   name: hpc
   namespace: sw77-hpc-test
