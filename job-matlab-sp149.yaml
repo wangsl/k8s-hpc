@@ -2,13 +2,13 @@
 kind: Job
 apiVersion: batch/v1
 metadata:
-  name: matlab
+  name: matlab-sp149
   namespace: sw77-hpc-test
   labels:
-    app: matlab
-    app.kubernetes.io/component: matlab
-    app.kubernetes.io/instance: matlab
-    app.kubernetes.io/name: matlab
+    app: matlab-sp149
+    app.kubernetes.io/component: matlab-sp149
+    app.kubernetes.io/instance: matlab-sp149
+    app.kubernetes.io/name: matlab-sp149
     app.openshift.io/runtime-namespace: sw77-hpc-test
 
 spec:
@@ -21,8 +21,8 @@ spec:
   template:
     metadata:
       labels:
-        app: matlab
-        deployment: matlab
+        app: matlab-sp149
+        deployment: matlab-sp149
     spec:
       volumes:
         - name: home
@@ -46,12 +46,12 @@ spec:
       containers:
         - resources:
             limits:
-              cpu: '160'
+              cpu: '180'
               memory: 800Gi
             requests:
-              cpu: '160'
+              cpu: '96'
               memory: 800Gi
-          name: matlab
+          name: matlab-sp149
           volumeMounts:
             - name: home
               mountPath: /home
@@ -65,7 +65,7 @@ spec:
               mountPath: /home/wang/.MathWorks/ServiceHost
               readOnly: true
             - name: matlab-connector
-              mountPath: /home/wang/.MATLABConnector
+              mountPath: /home/wang/.matlabConnector
           image: >-
              registry.cloud.rt.nyu.edu/sw77/matlab:2024b
           env:
@@ -75,16 +75,14 @@ spec:
               value: /home/wang
             - name: MLM_LICENSE_FILE
               value: 27000@lm2.its.nyu.edu,27000@lm3.its.nyu.edu,27000@lm4.its.nyu.edu
-            - name: MATLAB_PREFDIR
+            - name: matlab_PREFDIR
               value: /tmp/matlab
-            - name: MATLAB_LOG_DIR 
+            - name: matlab_LOG_DIR 
               value: /tmp/matlab
           command:
             - /bin/bash
             - '-c'
             - | 
-              sleep infinity
-              cd /home/wang/matlab-test/parfor-prefdir 
-              bash run-matlab.sbatch > stdout-$(hostname -s).log 2>&1
+              cd /home/wang/matlab-test/sp149/20240501/Beta_dist_code_edited
+              /opt/matlab/2024bu2/bin/matlab -batch "parpool('Threads', 96); Data_cleaning" > stdout.log 2>&1
       restartPolicy: Never
-

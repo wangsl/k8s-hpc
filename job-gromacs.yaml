@@ -12,8 +12,8 @@ metadata:
     app.openshift.io/runtime-namespace: sw77-hpc-test
 
 spec:
-  parallelism: 50
-  completions: 100
+  parallelism: 1
+  completions: 1
   completionMode: Indexed
   ttlSecondsAfterFinished: 120
   selector:
@@ -25,12 +25,12 @@ spec:
         deployment: gromacs
     spec:
       volumes:
-        - name: sw77-shared
+        - name: home
           persistentVolumeClaim:
             claimName: sw77-shared
-        - name: sw77-tmp
-          emptyDir:
-            sizeLimit: 5Gi
+        - name: etc-passwd
+          configMap:
+            name: hpc
       containers:
         - resources:
             limits:
@@ -41,10 +41,12 @@ spec:
               memory: 20Gi
           name: gromacs
           volumeMounts:
-            - name: sw77-shared
-              mountPath: /work
-            - mountPath: /scratch
-              name: sw77-tmp
+            - name: home
+              mountPath: /home
+            - name: etc-passwd
+              mountPath: /etc/passwd
+              subPath: etc-passwd-1002240000
+              readOnly: true
           image: >-
              registry.cloud.rt.nyu.edu/sw77/chemistry:20241207
           env:
@@ -56,12 +58,15 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+          workingDir: /home/wang
+          securityContext:
+            runAsUser: 1002240000
           command:
             - /bin/bash
             - '-c'
             - |
               source /ext3/env-chemistry.sh
-              cd /work/wang/gromacs-test 
+              cd /home/wang/gromacs-test 
               index="00000${MY_POD_INDEX}"
               index=${index: -4}
               work=work-${index} && mkdir -p ${work} && cd ${work} 
