@@ -1,0 +1,128 @@
+
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: orca
+  namespace: sw77-hpc-test
+  labels:
+    app: orca
+    app.kubernetes.io/component: orca
+    app.kubernetes.io/instance: orca
+    app.kubernetes.io/name: orca
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+
+spec:
+  parallelism: 10
+  completions: 10
+  completionMode: Indexed
+  ttlSecondsAfterFinished: 120
+  selector:
+    matchLabels:
+  template:
+    metadata:
+      labels:
+        app: orca
+        deployment: orca
+    spec:
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: tmp
+          emptyDir:
+            sizeLimit: 200Gi
+        - name: etc-passwd
+          configMap:
+            name: hpc
+      containers:
+        - resources:
+            limits:
+              cpu: '32'
+              memory: 200Gi
+            requests:
+              cpu: '32'
+              memory: 32Gi
+          name: orca
+          volumeMounts:
+            - name: home
+              mountPath: /home
+            - name: tmp
+              mountPath: /tmp
+            - name: etc-passwd
+              mountPath: /etc/passwd
+              subPath: etc-passwd-1002240000
+              readOnly: true
+          image: >-
+            registry.cloud.rt.nyu.edu/sw77/orca:6.0.1
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /home/wang
+            - name: USER
+              value: wang
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: MY_POD_SERVICE_ACCOUNT
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.serviceAccountName
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+          workingDir: /home/wang
+          securityContext:
+            runAsUser: 1002240000
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              function copy_files_back()
+              {
+                if [[ "$(pwd)" != "${ORCA_TMPDIR}" ]]; then return; fi
+                rm -rf *.tmp* *tmp ompi*
+                /bin/rsync -zavr * --exclude ${ORCA_TMPDIR}/* ${work_dir}/.
+                rm -rf ${ORCA_TMPDIR}
+              }
+
+              trap copy_files_back SIGKILL EXIT
+
+              source /ext3/orca/env.sh
+
+              ORCA_TMPDIR=/tmp/orca-tmp
+              rm -rf ${ORCA_TMPDIR} && mkdir -p ${ORCA_TMPDIR}
+
+              index="00000${MY_POD_INDEX}"
+              index=${index: -4}
+
+              cd /home/wang/orca-test
+              work="test-${index}"
+              rm -rf ${work} && mkdir -p ${work} && cd ${work}
+              cp -rp ../src/* .
+              input="orca.inp"
+              output="$(pwd)/orca.out"
+
+              work_dir=$(pwd)
+
+              cd ${ORCA_TMPDIR}
+              cp -rp ${work_dir}/${input} .
+              cp -rp ${work_dir}/Cinnoline_SingOnly_CASSCFOrbs.gbw .
+
+              ${ORCA} ${input} > ${output} 2>&1
+
+      restartPolicy: Never
