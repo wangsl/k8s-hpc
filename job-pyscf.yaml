@@ -11,7 +11,7 @@ metadata:
     app.openshift.io/runtime-namespace: sw77-hpc-test
 spec:
   parallelism: 100
-  completions: 800
+  completions: 142
   completionMode: Indexed
   ttlSecondsAfterFinished: 120
   selector:
@@ -82,8 +82,8 @@ spec:
             - '-c'
             - |
               cd /home/wang/pyscf
-              task_id=$((MY_POD_INDEX+1200))
-              if [[ ${task_id} -gt 19999 ]]; then exit; fi
+              task_id=$((MY_POD_INDEX+1058))
+              if [[ ${task_id} -gt 1200 ]]; then exit; fi
               index="00000${task_id}"
               index=${index: -4}
               work="job-${index}"
