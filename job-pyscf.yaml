@@ -10,8 +10,8 @@ metadata:
     app.kubernetes.io/name: pyscf
     app.openshift.io/runtime-namespace: sw77-hpc-test
 spec:
-  parallelism: 100
-  completions: 1000
+  parallelism: 30
+  completions: 2000
   completionMode: Indexed
   ttlSecondsAfterFinished: 120
   selector:
@@ -81,21 +81,23 @@ spec:
             - /bin/bash
             - '-c'
             - |
-              cd /home/wang/pyscf/md-001-1
-              task_id=$((MY_POD_INDEX+1000))
+              cd /home/wang/pyscf/md-001-3
+              task_id=$((MY_POD_INDEX))
               if [[ ${task_id} -gt 2000 ]]; then exit; fi
               index="00000${task_id}"
               index=${index: -4}
               work="job-${index}"
               mkdir -p ${work}
               cd ${work}
+              if [[ -e done.txt ]]; then exit; fi
+              rm -rf *
               ln -s ../src/testgpu_parallel.py .
-              ln -s ../src/simulation_local_all_12mer_md_001_1.npy .
+              ln -s ../src/simulation_local_all_12mer_md_001_3.npy .
               (
                 source /ext3/env.sh
                 echo "Job is running on ${MY_NODE_NAME}"
                 echo "Start time: $(date)" 
-                python testgpu_parallel.py ${task_id} simulation_local_all_12mer_md_001_1.npy && touch done.txt
+                python testgpu_parallel.py ${task_id} simulation_local_all_12mer_md_001_3.npy && touch done.txt
                 echo "End time: $(date)" 
               )  > stdout.log 2>&1
       restartPolicy: Never

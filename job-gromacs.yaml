@@ -12,8 +12,8 @@ metadata:
     app.openshift.io/runtime-namespace: sw77-hpc-test
 
 spec:
-  parallelism: 1
-  completions: 1
+  parallelism: 5
+  completions: 10
   completionMode: Indexed
   ttlSecondsAfterFinished: 120
   selector:
