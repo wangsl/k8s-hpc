@@ -2,7 +2,7 @@
 kind: Job
 apiVersion: batch/v1
 metadata:
-  name: ubuntu
+  name: ubuntu-test
   namespace: sw77-hpc-test
   labels:
     app: ubuntu
@@ -57,7 +57,7 @@ spec:
               subPath: etc-passwd-1002240000
               readOnly: true
           image: >-
-             registry.cloud.rt.nyu.edu/sw77/ubuntu:24.04-20241204
+             registry.cloud.rt.nyu.edu/sw77/test:01
           env:
             - name: TZ
               value: America/New_York

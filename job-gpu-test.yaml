@@ -1,0 +1,116 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: pytorch-test
+  namespace: sw77-hpc-test
+  labels:
+    app: pytorch-test
+    app.kubernetes.io/component: pytorch-test
+    app.kubernetes.io/instance: pytorch-test
+    app.kubernetes.io/name: pytorch-test
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+spec:
+  parallelism: 1
+  completions: 1
+  completionMode: Indexed
+  ttlSecondsAfterFinished: 120
+  selector:
+    matchLabels:
+
+  template:
+    metadata:
+      labels:
+        app: pytorch-test
+        deployment: pytorch-test
+    spec:
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: cache-volume
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1000Mi
+        - name: etc-passwd
+          configMap:
+            name: hpc
+      containers:
+        - resources:
+            limits:
+              cpu: '4'
+              memory: 20Gi
+              nvidia.com/gpu: "1"
+            requests:
+              cpu: '1'
+              memory: 2Gi
+              nvidia.com/gpu: "1"
+          name: pytorch-test
+          volumeMounts:
+            - name: home
+              mountPath: /home
+            - name: tmp
+              mountPath: /tmp
+            - name: cache-volume
+              mountPath: /dev/shm
+            - name: etc-passwd
+              mountPath: /etc/passwd
+              subPath: etc-passwd-1002240000
+              readOnly: true
+          image: >-
+            registry.cloud.rt.nyu.edu/sw77/pytorch-test:20250305
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /home/wang
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          workingDir: /home/wang
+          securityContext:
+            runAsUser: 1002240000
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              sleep infinity && \
+              cd /home/wang/pytorch-test/md-001-3
+              task_id=$((MY_POD_INDEX))
+              if [[ ${task_id} -gt 2000 ]]; then exit; fi
+              index="00000${task_id}"
+              index=${index: -4}
+              work="job-${index}"
+              mkdir -p ${work}
+              cd ${work}
+              if [[ -e done.txt ]]; then exit; fi
+              rm -rf *
+              ln -s ../src/testgpu_parallel.py .
+              ln -s ../src/simulation_local_all_12mer_md_001_3.npy .
+              (
+                source /ext3/env.sh
+                echo "Job is running on ${MY_NODE_NAME}"
+                echo "Start time: $(date)" 
+                python testgpu_parallel.py ${task_id} simulation_local_all_12mer_md_001_3.npy && touch done.txt
+                echo "End time: $(date)" 
+              )  > stdout.log 2>&1
+      restartPolicy: Never
+      tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/usage
+        operator: Exists
+#       operator: Equal
+#       value: dedicated
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
+
+# pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+# registry.cloud.rt.nyu.edu/sw77/cuda:12.6.3-ubuntu24.04-20250103
