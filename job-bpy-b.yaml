@@ -1,0 +1,112 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: bpy-b
+  namespace: sw77-hpc-test
+  labels:
+    app: bpy
+    app.kubernetes.io/component: bpy
+    app.kubernetes.io/instance: bpy
+    app.kubernetes.io/name: bpy
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+spec:
+  parallelism: 10
+  completions: 400
+  completionMode: Indexed
+  ttlSecondsAfterFinished: 120
+  selector:
+    matchLabels:
+
+  template:
+    metadata:
+      labels:
+        app: bpy
+        deployment: bpy
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - bpy
+              topologyKey: kubernetes.io/hostname
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: cache-volume
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1000Mi
+        - name: etc-passwd
+          configMap:
+            name: hpc
+      containers:
+        - resources:
+            limits:
+              cpu: '128'
+              memory: 120Gi
+              nvidia.com/gpu: "4"
+            requests:
+              cpu: '64'
+              memory: 30Gi
+              nvidia.com/gpu: "4"
+          name: bpy
+          volumeMounts:
+            - name: home
+              mountPath: /home
+            - name: tmp
+              mountPath: /tmp
+            - name: cache-volume
+              mountPath: /dev/shm
+            - name: etc-passwd
+              mountPath: /etc/passwd
+              subPath: etc-passwd-1002240000
+              readOnly: true
+          image: >-
+            registry.cloud.rt.nyu.edu/sw77/bpy:4.3.0
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /home/wang
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          workingDir: /home/wang
+          securityContext:
+            runAsUser: 1002240000
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              cd /home/wang/sm12754/20250308/Hierarchical_3DGS
+              source /ext3/env.sh
+              export LD_LIBRARY_PATH=/home/wang/sm12754/libs:${LD_LIBRARY_PATH}
+              task_id=$((MY_POD_INDEX))
+              index="00000${task_id}"
+              index=${index: -4}
+              #python -u apartment_interiors_studio_A_final.py --image_id=${task_id} > logs/apartment-${index}.log 2>&1
+              python -u cyberpunk_apartment_interior_final.py --image_id=${task_id} > logs/cyberpunk-${index}.log 2>&1
+      restartPolicy: Never
+      tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/usage
+        operator: Exists
+        #operator: Equal
+        #value: dedicated
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
+      
