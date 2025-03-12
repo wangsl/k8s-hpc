@@ -11,7 +11,7 @@ metadata:
     app.openshift.io/runtime-namespace: sw77-hpc-test
 spec:
   parallelism: 10
-  completions: 400
+  completions: 100
   completionMode: Indexed
   ttlSecondsAfterFinished: 120
   selector:
@@ -91,14 +91,14 @@ spec:
             - /bin/bash
             - '-c'
             - |
-              cd /home/wang/sm12754/20250308/Hierarchical_3DGS
+              #cd /home/wang/sm12754/20250308/Hierarchical_3DGS
+              cd /home/wang/sm12754/20250311
               source /ext3/env.sh
               export LD_LIBRARY_PATH=/home/wang/sm12754/libs:${LD_LIBRARY_PATH}
-              task_id=$((MY_POD_INDEX))
+              task_id=$((MY_POD_INDEX+400))
               index="00000${task_id}"
               index=${index: -4}
               python -u apartment_interiors_studio_A_final.py --image_id=${task_id} > logs/apartment-${index}.log 2>&1
-              #python -u cyberpunk_apartment_interior_final.py --image_id=${task_id} > logs/cyberpunk-${index}.log 2>&1
       restartPolicy: Never
       tolerations:
       - effect: NoSchedule
