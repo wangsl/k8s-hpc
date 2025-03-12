@@ -1,0 +1,105 @@
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: af3
+  namespace: sw77-hpc-test
+  labels:
+    app: af3
+    app.kubernetes.io/component: af3
+    app.kubernetes.io/instance: af3
+    app.kubernetes.io/name: af3
+    app.openshift.io/runtime-namespace: sw77-hpc-test
+spec:
+  parallelism: 1
+  completions: 1
+  completionMode: Indexed
+  ttlSecondsAfterFinished: 120
+  selector:
+    matchLabels:
+
+  template:
+    metadata:
+      labels:
+        app: af3
+        deployment: af3
+    spec:
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: sw77-shared
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: cache-volume
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1000Mi
+        - name: etc-passwd
+          configMap:
+            name: hpc
+      containers:
+        - resources:
+            limits:
+              cpu: '4'
+              memory: 20Gi
+              nvidia.com/gpu: "1"
+            requests:
+              cpu: '4'
+              memory: 20Gi
+              nvidia.com/gpu: "1"
+          name: af3
+          volumeMounts:
+            - name: home
+              mountPath: /home
+            - name: tmp
+              mountPath: /tmp
+            - name: cache-volume
+              mountPath: /dev/shm
+            - name: etc-passwd
+              mountPath: /etc/passwd
+              subPath: etc-passwd-1002240000
+              readOnly: true
+          image: >-
+            registry.cloud.rt.nyu.edu/sw77/af3:3.0.1-20250312
+          env:
+            - name: TZ
+              value: America/New_York
+            - name: HOME
+              value: /home/wang
+            - name: MY_POD_INDEX
+              valueFrom:
+                fieldRef:
+                  fieldPath: 'metadata.labels[''batch.kubernetes.io/job-completion-index'']'
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          workingDir: /home/wang
+          securityContext:
+            runAsUser: 1002240000
+          command:
+            - /bin/bash
+            - '-c'
+            - |
+              cd /home/wang/af3/test-3.0.1
+              source /ext3/env.sh
+              export AF3_DATA_HOME=/ext3 
+              python /ext3/alphafold3/run_alphafold.py \
+              --json_path=output/2pv7/2pv7_data.json \
+              --output_dir=output \
+              --run_data_pipeline=false \
+              --run_inference=true \
+              --model_dir=/ext3/af3-models > stdout.log 2>&1
+      restartPolicy: Never
+      tolerations:
+      - effect: NoSchedule
+        key: nvidia.com/usage
+        operator: Exists
+#       operator: Equal
+#       value: dedicated
+      - effect: NoSchedule
+        key: nvidia.com/gpu
+        operator: Exists
+
+# pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+# registry.cloud.rt.nyu.edu/sw77/cuda:12.6.3-ubuntu24.04-20250103
