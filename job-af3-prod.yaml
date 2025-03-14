@@ -10,8 +10,8 @@ metadata:
     app.kubernetes.io/name: af3
     app.openshift.io/runtime-namespace: sw77-hpc-test
 spec:
-  parallelism: 16
-  completions: 32
+  parallelism: 20
+  completions: 1602
   completionMode: Indexed
   ttlSecondsAfterFinished: 120
   selector:
@@ -40,12 +40,12 @@ spec:
       containers:
         - resources:
             limits:
-              cpu: '4'
-              memory: 20Gi
+              cpu: '8'
+              memory: 40Gi
               nvidia.com/gpu: "1"
             requests:
-              cpu: '4'
-              memory: 20Gi
+              cpu: '2'
+              memory: 10Gi
               nvidia.com/gpu: "1"
           name: af3
           volumeMounts:
@@ -82,18 +82,20 @@ spec:
             - /bin/bash
             - '-c'
             - |
-              cd /home/wang/af3/test-3.0.1
-              task_id=$((MY_POD_INDEX))
-              index="00000${task_id}"
-              index=${index: -4}
-              work="work-${index}"
-              rm -rf ${work} && mkdir -p ${work}/output && cd ${work}
+              cd /home/wang/syz248/work
+              n=$((MY_POD_INDEX+1))
+              json_file=$(head -${n} /home/wang/syz248/data_jsons.txt | tail -1 | awk '{print $2}')
+              name=$(echo ${json_file} | awk -F/ '{print $NF}' | sed -e 's/_data.json$//')
+              work="${name}"
+              mkdir -p ${work}/output && cd ${work}
+              if [[ $(find  . -name ranking_scores.csv | wc -l) -eq 1 ]]; then exit; fi
               source /ext3/env.sh
-              python /ext3/alphafold3/run_alphafold.py \
-              --json_path=/home/wang/af3/test-3.0.1/output/2pv7/2pv7_data.json \
+              python -u /ext3/alphafold3/run_alphafold.py \
+              --json_path=${json_file} \
               --output_dir=output \
               --run_data_pipeline=false \
-              --run_inference=true > stdout.log 2>&1
+              --run_inference=true > stdout.log 2>&1 && touch done.txt
+              exit 0
       restartPolicy: Never
       tolerations:
       - effect: NoSchedule
