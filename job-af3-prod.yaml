@@ -10,8 +10,8 @@ metadata:
     app.kubernetes.io/name: af3
     app.openshift.io/runtime-namespace: sw77-hpc-test
 spec:
-  parallelism: 20
-  completions: 1602
+  parallelism: 24
+  completions: 445 #226411
   completionMode: Indexed
   ttlSecondsAfterFinished: 120
   selector:
@@ -82,19 +82,26 @@ spec:
             - /bin/bash
             - '-c'
             - |
-              cd /home/wang/syz248/work
-              n=$((MY_POD_INDEX+1))
-              json_file=$(head -${n} /home/wang/syz248/data_jsons.txt | tail -1 | awk '{print $2}')
-              name=$(echo ${json_file} | awk -F/ '{print $NF}' | sed -e 's/_data.json$//')
-              work="${name}"
-              mkdir -p ${work}/output && cd ${work}
-              if [[ $(find  . -name ranking_scores.csv | wc -l) -eq 1 ]]; then exit; fi
               source /ext3/env.sh
-              python -u /ext3/alphafold3/run_alphafold.py \
-              --json_path=${json_file} \
-              --output_dir=output \
-              --run_data_pipeline=false \
-              --run_inference=true > stdout.log 2>&1 && touch done.txt
+              work_dir=/home/wang/syz248/work
+              start=$((MY_POD_INDEX*100))
+              n_lines=$(wc -l < /home/wang/syz248/inference-jsons.txt)
+              for((i=0; i<100; i++)); do
+                cd ${work_dir}
+                n=$((start+i))
+                if [[ ${n} -gt ${n_lines} ]]; then exit; fi
+                json_file=$(head -${n} /home/wang/syz248/inference-jsons.txt | tail -1 | awk '{print $2}')
+                name=$(echo ${json_file} | awk -F/ '{print $NF}' | sed -e 's/_data.json$//')
+                if [[ "${name}" == "" ]]; then continue; fi
+                work="${name}"
+                mkdir -p ${work}/output && cd ${work}
+                if [[ $(find . -name ranking_scores.csv | wc -l) -eq 1 ]]; then continue; fi
+                python -u /ext3/alphafold3/run_alphafold.py \
+                --json_path=${json_file} \
+                --output_dir=output \
+                --run_data_pipeline=false \
+                --run_inference=true > stdout.log 2>&1 && touch done.txt
+              done
               exit 0
       restartPolicy: Never
       tolerations:

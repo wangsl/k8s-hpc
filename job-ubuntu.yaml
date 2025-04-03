@@ -2,7 +2,7 @@
 kind: Job
 apiVersion: batch/v1
 metadata:
-  name: ubuntu-test
+  name: ubuntu
   namespace: sw77-hpc-test
   labels:
     app: ubuntu
